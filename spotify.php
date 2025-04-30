@@ -3,8 +3,8 @@ header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 
 // Configuration - should move to environment variables in production
-$client_id = '5941bb8af55d4a52a91c5297f616e325';
-$client_secret = '408f04b237aa4dd2ba1b8bfc5da9eff8';
+$client_id = 'YOUR_SPOTIFY_CLIENT_ID';
+$client_secret = 'YOUR_SPOTIFY_CLIENT_ID';
 
 // Rate limiting - simple implementation
 $rate_limit = 100; // requests per 15 minutes
