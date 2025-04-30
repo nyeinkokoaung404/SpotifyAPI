@@ -1,8 +1,8 @@
 <?php
 header('Content-Type: application/json');
 
-$client_id = '5941bb8af55d4a52a91c5297f616e325';
-$client_secret = '408f04b237aa4dd2ba1b8bfc5da9eff8';
+$client_id = 'YOUR_SPOTIFY_CLIENT_ID';
+$client_secret = 'YOUR_SPOTIFY_CLIENT_SECRET';
 
 function getSpotifyAccessToken() {
     global $client_id, $client_secret;
