@@ -94,7 +94,7 @@ def search_spotify(query, limit=5):
                 'name': track['name'],
                 'artists': ", ".join(artist['name'] for artist in track['artists']),
                 'id': track['id'],
-                'url': track['external_urls']['spotify'],
+                'track_url': track['external_urls']['spotify'],
                 'cover_url': track['album']['images'][0]['url'] if track['album']['images'] else None
             }
             for track in results['tracks']['items']
