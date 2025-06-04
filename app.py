@@ -8,8 +8,8 @@ import re
 app = Flask(__name__)
 
 # Spotify credentials
-CLIENT_ID = '5941bb8af55d4a52a91c5297f616e325'
-CLIENT_SECRET = '408f04b237aa4dd2ba1b8bfc5da9eff8'
+CLIENT_ID = ''
+CLIENT_SECRET = ''
 
 # Initialize Spotify client
 sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=CLIENT_ID, client_secret=CLIENT_SECRET))
