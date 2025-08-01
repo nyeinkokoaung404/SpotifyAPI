@@ -31,7 +31,7 @@ def get_spotmate_download(spotify_url):
         
         # Get session and CSRF token
         session = requests.Session()
-        home_response = session.get('https://spotmate.online', headers=headers, timeout=10)
+        home_response = session.get('https://spotidown.app', headers=headers, timeout=10)
         home_response.raise_for_status()
         
         soup = BeautifulSoup(home_response.text, 'html.parser')
