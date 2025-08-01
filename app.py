@@ -8,8 +8,8 @@ import re
 app = Flask(__name__)
 
 # Spotify credentials
-CLIENT_ID = '5941bb8af55d4a52a91c5297f616e325'
-CLIENT_SECRET = '408f04b237aa4dd2ba1b8bfc5da9eff8'
+CLIENT_ID = '06244788759943e8a2f577d43c6fede1'
+CLIENT_SECRET = '9e5b154bb43945b0880c36594bea4ad3'
 
 # Initialize Spotify client
 sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=CLIENT_ID, client_secret=CLIENT_SECRET))
@@ -62,11 +62,9 @@ def get_spotmate_download(spotify_url):
         return None
 
 def get_track_metadata(track_id):
-    """Get track metadata from Spotify, including cover art."""
+    """Get track metadata from Spotify."""
     try:
         track = sp.track(track_id)
-        # Get the largest available cover art (usually at index 0)
-        cover_art = track['album']['images'][0]['url'] if track['album']['images'] else None
         return {
             'id': track['id'],
             'title': track['name'],
@@ -75,7 +73,6 @@ def get_track_metadata(track_id):
             'release_date': track['album']['release_date'],
             'duration': f"{track['duration_ms'] // 60000}:{(track['duration_ms'] % 60000) // 1000:02d}",
             'isrc': track['external_ids'].get('isrc', 'N/A'),
-            'cover_art': cover_art
         }
     except Exception:
         return None
@@ -131,7 +128,6 @@ def download_track():
             'release_date': metadata['release_date'],
             'duration': metadata['duration'],
             'isrc': metadata['isrc'],
-            'cover_art': metadata['cover_art'],
             'credit': 'Downloaded By @TheSmartDev And API Developer @TheSmartDev Organization github.com/TheSmartDevs'
         })
 
@@ -157,7 +153,7 @@ def search_tracks():
         if not tracks:
             return jsonify({
                 'status': False,
-                'message': 'No tracks found ❌'
+            'message': 'No tracks found ❌'
             }), 404
 
         results = []
@@ -178,7 +174,6 @@ def search_tracks():
                 'release_date': metadata['release_date'],
                 'duration': metadata['duration'],
                 'isrc': metadata['isrc'],
-                'cover_art': metadata['cover_art'],
                 'credit': 'Downloaded By @TheSmartDev And API Developer @TheSmartDev Organization github.com/TheSmartDevs' if download_url else ''
             })
 
