@@ -40,12 +40,12 @@ def get_spotmate_download(spotify_url):
         # Prepare conversion request
         headers.update({
             'X-CSRF-TOKEN': csrf_token,
-            'Referer': 'https://spotmate.online',
+            'Referer': 'https://spotidown.app',
             'Content-Type': 'application/json'
         })
         
         convert_response = session.post(
-            'https://spotmate.online/convert',
+            'https://spotidown.app/convert',
             json={'urls': spotify_url},
             headers=headers,
             timeout=15
