@@ -8,120 +8,130 @@ from urllib.parse import quote
 
 app = Flask(__name__)
 
-# Spotify credentials
+# JSON pretty print configuration
+app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+
+# Spotify credentials (environment variables recommended for security)
 CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID', '06244788759943e8a2f577d43c6fede1')
 CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET', '9e5b154bb43945b0880c36594bea4ad3')
 
+# Initialize Spotify client
 sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
     client_id=CLIENT_ID,
     client_secret=CLIENT_SECRET
 ))
 
-def is_spotify_url(input_string):
-    """Spotify Track URL ဟုတ်မဟုတ် စစ်ဆေးခြင်း"""
-    return bool(re.match(r'^https://open\.spotify\.com/track/[a-zA-Z0-9]+', input_string))
+def is_spotify_url(url):
+    """Validate if the input is a proper Spotify track URL."""
+    pattern = r'^https://open\.spotify\.com/track/[a-zA-Z0-9]+'
+    return bool(re.match(pattern, url))
 
-def get_direct_download_link(spotify_url):
-    """သင်ပေးထားသော Direct API ကို အသုံးပြု၍ Download Link ထုတ်ပေးခြင်း"""
+def generate_direct_link(spotify_url):
+    """Generate the direct MP3 download link using the provided API."""
     try:
-        # URL ကို encode လုပ်ပြီး direct link ပြန်ပေးခြင်း
         encoded_url = quote(spotify_url)
-        direct_link = f"https://spotmp3.app/api/direct-download?url={encoded_url}"
-        return direct_link
-    except Exception as e:
-        print(f"[Link Generation Error] {str(e)}")
+        return f"https://spotmp3.app/api/direct-download?url={encoded_url}"
+    except:
         return None
 
-def get_track_metadata(track_id):
-    """Spotify မှ သီချင်းအချက်အလက်များ ရယူခြင်း"""
+def get_track_info(track_id):
+    """Fetch track metadata from Spotify official API."""
     try:
         track = sp.track(track_id)
-        album = track['album']
-        cover_url = album['images'][0]['url'] if album.get('images') else None
-        
         return {
-            'id': track['id'],
             'title': track['name'],
-            'artists': ", ".join(artist['name'] for artist in track['artists']),
-            'album': album['name'],
-            'release_date': album['release_date'],
-            'duration_formatted': f"{track['duration_ms'] // 60000}:{(track['duration_ms'] % 60000) // 1000:02d}",
-            'isrc': track['external_ids'].get('isrc', 'N/A'),
-            'cover_url': cover_url,
-            'preview_url': track.get('preview_url')
+            'artist': ", ".join(artist['name'] for artist in track['artists']),
+            'album': track['album']['name'],
+            'release_date': track['album']['release_date'],
+            'duration': f"{track['duration_ms'] // 60000}:{(track['duration_ms'] % 60000) // 1000:02d}",
+            'cover_art': track['album']['images'][0]['url'] if track['album']['images'] else None,
+            'spotify_link': f"https://open.spotify.com/track/{track_id}"
         }
     except Exception as e:
-        print(f"[Metadata Error] {str(e)}")
+        print(f"Metadata Error: {e}")
         return None
 
 @app.route('/')
-def home():
-    return render_template('status.html')
+def index():
+    """Status page."""
+    return jsonify({
+        'api_status': 'Online',
+        'endpoints': ['/sp/dl?url={spotify_url}', '/sp/search?q={query}']
+    })
 
 @app.route('/sp/dl', methods=['GET'])
-def download_track():
-    spotify_url = request.args.get('url')
+def download():
+    """Main download endpoint with structured JSON output."""
+    url = request.args.get('url')
     
-    if not spotify_url or not is_spotify_url(spotify_url):
+    if not url or not is_spotify_url(url):
         return jsonify({
-            'status': False,
-            'message': 'Valid Spotify URL required'
+            'success': False,
+            'error': 'Invalid or missing Spotify URL'
         }), 400
 
     try:
-        track_id = spotify_url.split('/track/')[1].split('?')[0]
-        metadata = get_track_metadata(track_id)
+        # Extract ID and fetch data
+        track_id = url.split('/track/')[1].split('?')[0]
+        metadata = get_track_info(track_id)
         
         if not metadata:
-            return jsonify({'status': False, 'message': 'Metadata fetch failed'}), 500
+            return jsonify({'success': False, 'error': 'Could not retrieve metadata'}), 404
 
-        # Direct Download Link ကို ရယူခြင်း
-        download_url = get_direct_download_link(spotify_url)
-        
+        # Final structured response
         return jsonify({
-            'status': True,
-            'metadata': metadata,
-            'download': {
-                'url': download_url,
-                'available': True,
-                'note': 'Clicking this link will start the download directly.'
+            'success': True,
+            'track_details': {
+                'title': metadata['title'],
+                'artist': metadata['artist'],
+                'album': metadata['album'],
+                'release_year': metadata['release_date'],
+                'duration': metadata['duration']
             },
-            'credit': 'API by @nkka404'
-        })
+            'assets': {
+                'cover_image': metadata['cover_art'],
+                'download_link': generate_direct_link(url)
+            },
+            'source': {
+                'platform': 'Spotify',
+                'original_url': metadata['spotify_link']
+            },
+            'developer_notice': 'Direct download link provided by SpotMP3 API'
+        }), 200
 
     except Exception as e:
-        return jsonify({'status': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/sp/search', methods=['GET'])
-def search_tracks():
+def search():
+    """Search endpoint returning multiple results with download links."""
     query = request.args.get('q')
-    limit = min(int(request.args.get('limit', 5)), 10)
-    
     if not query:
-        return jsonify({'status': False, 'message': 'Query required'}), 400
+        return jsonify({'success': False, 'error': 'Query parameter "q" is required'}), 400
 
     try:
-        results = sp.search(q=query, type='track', limit=limit)
-        tracks = []
-        for track in results['tracks']['items']:
-            s_url = track['external_urls']['spotify']
-            tracks.append({
-                'name': track['name'],
-                'artists': ", ".join(artist['name'] for artist in track['artists']),
-                'id': track['id'],
-                'url': s_url,
-                'cover_url': track['album']['images'][0]['url'] if track['album']['images'] else None,
-                'download_url': get_direct_download_link(s_url) # Direct link ထည့်ပေးထားသည်
+        results = sp.search(q=query, type='track', limit=5)
+        formatted_results = []
+
+        for item in results['tracks']['items']:
+            s_url = item['external_urls']['spotify']
+            formatted_results.append({
+                'title': item['name'],
+                'artist': ", ".join(a['name'] for a in item['artists']),
+                'album': item['album']['name'],
+                'thumbnail': item['album']['images'][0]['url'] if item['album']['images'] else None,
+                'download_url': generate_direct_link(s_url)
             })
-        
+
         return jsonify({
-            'status': True,
-            'count': len(tracks),
-            'results': tracks
-        })
+            'success': True,
+            'total_found': len(formatted_results),
+            'results': formatted_results
+        }), 200
 
     except Exception as e:
-        return jsonify({'status': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    # Running on port 5000 with debug mode enabled
+    app.run(host='0.0.0.0', port=5000, debug=True)
