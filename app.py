@@ -114,14 +114,32 @@ def search():
         formatted_results = []
 
         for item in results['tracks']['items']:
+            track_id = item['id']
             s_url = item['external_urls']['spotify']
-            formatted_results.append({
-                'title': item['name'],
-                'artist': ", ".join(a['name'] for a in item['artists']),
-                'album': item['album']['name'],
-                'thumbnail': item['album']['images'][0]['url'] if item['album']['images'] else None,
-                'download_url': generate_direct_link(s_url)
-            })
+            
+            # Use existing get_track_info function
+            metadata = get_track_info(track_id)
+            
+            if metadata:
+                formatted_results.append({
+                    'success': True,
+                    'track_details': {
+                        'title': metadata['title'],
+                        'artist': metadata['artist'],
+                        'album': metadata['album'],
+                        'release_year': metadata['release_date'].split('-')[0],
+                        'duration': metadata['duration']
+                    },
+                    'assets': {
+                        'cover_image': metadata['cover_art'],
+                        'download_link': generate_direct_link(s_url)
+                    },
+                    'source': {
+                        'platform': 'Spotify',
+                        'original_url': s_url
+                    },
+                    'developer_notice': 'Direct download link provided by SpotMP3 API'
+                })
 
         return jsonify({
             'success': True,
@@ -135,3 +153,4 @@ def search():
 if __name__ == '__main__':
     # Running on port 5000 with debug mode enabled
     app.run(host='0.0.0.0', port=5000, debug=True)
+
